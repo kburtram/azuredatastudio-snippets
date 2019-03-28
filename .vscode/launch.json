@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Gulp Build - Query Plan",
+            "program": "${workspaceFolder}/samples/queryplan/node_modules/gulp/bin/gulp.js",
+            "cwd": "${workspaceFolder}/samples/queryplan",
+            "stopOnEntry": true,
+            "args": [
+                "compile"
+            ]
+        },
+        {
+            "name": "ADS Dev - Query Plan",
+            "type": "sqlopsExtensionHost",
+            "request": "launch",
+            "windows": {
+                "runtimeExecutable": "${env:SQLOPS_DEV}/scripts/sql.bat",
+            },
+            "osx": {
+                "runtimeExecutable": "$SQLOPS_DEV/scripts/sql.sh"
+            },
+            "linux": {
+                "runtimeExecutable": "$SQLOPS_DEV/scripts/sql.sh"
+            },
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}\\samples\\queryplan" ],
+            "stopOnEntry": false,
+            "sourceMaps": true,
+            "outFiles": [ "${workspaceFolder}\\samples\\queryplan\\out\\**\\*.js" ],
+            "preLaunchTask": "",
+            "timeout": 60000
+        },
+        {
+            "name": "ADS Installed - Query Plan",
+            "type": "sqlopsExtensionHost",
+            "request": "launch",
+            "runtimeExecutable": "azuredatastudio",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}\\samples\\queryplan" ],
+            "stopOnEntry": false,
+            "sourceMaps": true,
+            "outFiles": [ "${workspaceFolder}\\samples\\queryplan\\out\\**\\*.js" ],
+            "preLaunchTask": "",
+            "timeout": 60000
+        }
+    ]
+}
