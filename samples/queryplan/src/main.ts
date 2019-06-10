@@ -25,6 +25,26 @@ export function activate(context: vscode.ExtensionContext) {
 		onQueryEvent(type: azdata.queryeditor.QueryEvent, document: azdata.queryeditor.QueryDocument, args: any) {
 			if (type === 'executionPlan') {
 				if (toggleOn) {
+					let tab2 = azdata.window.createTab('Query Watcher 2');
+					tab2.registerContent(async view => {
+						let webview1 = view.modelBuilder.webView()
+							.withProperties({
+								html: "<h1>Here it is</h1>"
+							}).component();
+
+						webview1.onMessage((params) => {
+							webview1.html = '<h2>Updated Content</h2>';
+						});
+
+						let divModel = view.modelBuilder.divContainer()
+							.withItems([webview1])
+							.withLayout({ width: '100%', height: '100%' })
+							.component();
+
+						await view.initializeModel(divModel);
+					});
+					document.createQueryTab(tab2);
+
 					let tab = azdata.window.createTab('Query Watcher');
 					tab.registerContent(async view => {
 						let fileNameTextBox = view.modelBuilder.inputBox().component();
