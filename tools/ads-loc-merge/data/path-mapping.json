@@ -1,0 +1,8 @@
+{
+	"mappings": [
+		{
+			"from": "sql/parts/disasterRecovery/backup/backup.component",
+			"to": "sql/workbench/parts/backup/electron-browser/backup.component"
+		}
+	]
+}
