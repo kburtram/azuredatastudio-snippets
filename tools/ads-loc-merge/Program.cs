@@ -10,30 +10,6 @@ using Newtonsoft.Json;
 
 namespace AzureDataStudio.Localization
 {
-    public class Mapping
-    {
-        public string To { get; set; }
-
-        public string From { get; set; }
-    }
-
-    public class PathMap
-    {
-        public Mapping[] Mappings { get; set; }
-
-        public string Map(string path)
-        {
-            foreach (Mapping mapping in this.Mappings)
-            {
-                if (string.Equals(mapping.From, path, StringComparison.OrdinalIgnoreCase))
-                {
-                    return mapping.To;
-                }
-            }
-            return path;
-        }
-    }
-
     /// <summary>
     /// Main application classs
     /// </summary>
@@ -51,7 +27,10 @@ namespace AzureDataStudio.Localization
                 return;
             }
 
-            if (string.Equals(commandOptions.Action, CommandOptions.DefaultAction, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(
+                commandOptions.Action, 
+                CommandOptions.DefaultAction, 
+                StringComparison.OrdinalIgnoreCase))
             {
                 PathMap mappings = null;
                 string mappingPath = commandOptions.PathMapping;
@@ -69,6 +48,17 @@ namespace AzureDataStudio.Localization
 
                 LangPackMerger merger = new LangPackMerger(commandOptions.LanguagePackDirectory);
                 merger.Merge(resourceReader);
+            }
+            else if (string.Equals(
+                commandOptions.Action,
+                CommandOptions.PathMapAction,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                ResourceReader resourceReader = new ResourceReader(commandOptions.ResourceDirectoryPath);
+                resourceReader.Read();
+
+                PathMapper mapper = new PathMapper(commandOptions.SourceDirectoryPath, resourceReader);
+                mapper.Write(commandOptions.PathMapping);
             }
             else
             {

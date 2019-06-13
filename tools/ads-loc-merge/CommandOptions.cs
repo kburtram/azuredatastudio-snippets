@@ -16,6 +16,8 @@ namespace AzureDataStudio.Localization
     {
         public static readonly string DefaultAction = "default";
 
+        public static readonly string PathMapAction = "pathmap";
+
         /// <summary>
         /// Construct and parse command line options from the arguments array
         /// </summary>
@@ -47,6 +49,9 @@ namespace AzureDataStudio.Localization
                             case "resource-dir":
                                 this.ResourceDirectoryPath = args[++i];
                                 break;
+                            case "source-dir":
+                                this.SourceDirectoryPath = args[++i];
+                                break;
                             case "path-mapping":
                                 this.PathMapping = args[++i];
                                 break;                      
@@ -57,9 +62,7 @@ namespace AzureDataStudio.Localization
                     }
                 }
 
-                if (string.IsNullOrWhiteSpace(this.LanguagePackDirectory)
-                    || string.IsNullOrWhiteSpace(this.ResourceDirectoryPath)
-                    || string.IsNullOrWhiteSpace(this.PathMapping))
+                if (!CheckRequiredArguments())
                 {
                     this.ErrorMessage = "Missing required arguments";
                 }
@@ -77,6 +80,26 @@ namespace AzureDataStudio.Localization
                     this.ShouldExit = true;
                 }
             }
+        }
+
+        private bool CheckRequiredArguments()
+        {
+            if (string.Equals(this.Action, CommandOptions.DefaultAction, StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrWhiteSpace(this.LanguagePackDirectory)
+                || string.IsNullOrWhiteSpace(this.ResourceDirectoryPath)
+                || string.IsNullOrWhiteSpace(this.PathMapping)))
+            {
+                return false;
+            }
+
+            if (string.Equals(this.Action, CommandOptions.PathMapAction, StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrWhiteSpace(this.SourceDirectoryPath)
+                || string.IsNullOrWhiteSpace(this.PathMapping)))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -98,6 +121,11 @@ namespace AzureDataStudio.Localization
         /// resource directory path
         /// </summary>
         public string ResourceDirectoryPath { get; private set; }
+
+        /// <summary>
+        /// source directory path
+        /// </summary>
+        public string SourceDirectoryPath { get; private set; }
 
         /// <summary>
         /// application action
@@ -125,8 +153,10 @@ namespace AzureDataStudio.Localization
                     ServiceName + " " + Environment.NewLine +
                     "   Options:" + Environment.NewLine +
                     "        --langpack-dir [DIRECTORY]" + Environment.NewLine +
-                    "        --resource-dir [DIRECTORY]" + Environment.NewLine,
-                    "        --path-mapping [FILE]" + Environment.NewLine,               
+                    "        --resource-dir [DIRECTORY]" + Environment.NewLine +
+                    "        --path-mapping [FILE]" + Environment.NewLine +
+                    "        --source-mapping [FILE]" + Environment.NewLine +             
+                    "        --action [default|pathmap]" + Environment.NewLine,
                     this.ErrorMessage);
                 return str;
             }

@@ -16,8 +16,12 @@
                 "D:\\xplat\\vscode-loc\\i18n\\vscode-language-pack-es", 
                 "--resource-dir", 
                 "D:\\xplat\\azuredatastudio\\i18n\\esn",
+                "--source-dir", 
+                "D:\\xplat\\azuredatastudio\\src\\sql",
                 "--path-mapping",
-                "D:\\xplat\\ads-loc-merge\\data\\path-mapping.json"
+                "D:\\xplat\\azuredatastudio-snippets\\tools\\ads-loc-merge\\data\\path-mapping.json",
+                "--action",
+                "default"
             ],
             "cwd": "${workspaceFolder}/",
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
