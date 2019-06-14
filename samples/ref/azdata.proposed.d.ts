@@ -5,7 +5,6 @@
 
 // This is the place for API experiments and proposal.
 
-import * as core from 'azdata';
 import * as vscode from 'vscode';
 
 declare module 'azdata' {
@@ -27,6 +26,8 @@ declare module 'azdata' {
 
 		export function registerObjectExplorerNodeProvider(provider: ObjectExplorerNodeProvider): vscode.Disposable;
 
+		export function registerIconProvider(provider: IconProvider): vscode.Disposable;
+
 		export function registerTaskServicesProvider(provider: TaskServicesProvider): vscode.Disposable;
 
 		export function registerFileBrowserProvider(provider: FileBrowserProvider): vscode.Disposable;
@@ -45,6 +46,8 @@ declare module 'azdata' {
 
 		export function registerDacFxServicesProvider(provider: DacFxServicesProvider): vscode.Disposable;
 
+		export function registerSchemaCompareServicesProvider(provider: SchemaCompareServicesProvider): vscode.Disposable;
+
 		/**
 		 * An [event](#Event) which fires when the specific flavor of a language used in DMP
 		 * connections has changed. And example is for a SQL connection, the flavor changes
@@ -59,8 +62,8 @@ declare module 'azdata' {
 	export namespace credentials {
 		/**
 		 * Register a credential provider to handle credential requests.
-		 * @param {CredentialProvider} provider The provider to register
-		 * @return {Disposable} Handle to the provider for disposal
+		 * @param provider The provider to register
+		 * @return Handle to the provider for disposal
 		 */
 		export function registerProvider(provider: CredentialProvider): vscode.Disposable;
 
@@ -68,8 +71,8 @@ declare module 'azdata' {
 		 * Retrieves a provider from the extension host if one has been registered. Any credentials
 		 * accessed with the returned provider will have the namespaceId appended to credential ID
 		 * to prevent extensions from trampling over each others' credentials.
-		 * @param {string} namespaceId ID that will be appended to credential IDs.
-		 * @return {Thenable<CredentialProvider>} Promise that returns the namespaced provider
+		 * @param namespaceId ID that will be appended to credential IDs.
+		 * @return Promise that returns the namespaced provider
 		 */
 		export function getProvider(namespaceId: string): Thenable<CredentialProvider>;
 	}
@@ -97,14 +100,14 @@ declare module 'azdata' {
 
 		/**
 		 * Get the credentials for an active connection
-		 * @param {string} connectionId The id of the connection
-		 * @returns {{ [name: string]: string}} A dictionary containing the credentials as they would be included in the connection's options dictionary
+		 * @param connectionId The id of the connection
+		 * @returns A dictionary containing the credentials as they would be included in the connection's options dictionary
 		 */
 		export function getCredentials(connectionId: string): Thenable<{ [name: string]: string }>;
 
 		/**
 		 * Get ServerInfo for a connectionId
-		 * @param {string} connectionId The id of the connection
+		 * @param connectionId The id of the connection
 		 * @returns ServerInfo
 		 */
 		export function getServerInfo(connectionId: string): Thenable<ServerInfo>;
@@ -133,35 +136,35 @@ declare module 'azdata' {
 		 * Get an Object Explorer node corresponding to the given connection and path. If no path
 		 * is given, it returns the top-level node for the given connection. If there is no node at
 		 * the given path, it returns undefined.
-		 * @param {string} connectionId The id of the connection that the node exists on
-		 * @param {string?} nodePath The path of the node to get
-		 * @returns {ObjectExplorerNode} The node corresponding to the given connection and path,
+		 * @param connectionId The id of the connection that the node exists on
+		 * @param nodePath The path of the node to get
+		 * @returns The node corresponding to the given connection and path,
 		 * or undefined if no such node exists.
 		*/
 		export function getNode(connectionId: string, nodePath?: string): Thenable<ObjectExplorerNode>;
 
 		/**
 		 * Get all active Object Explorer connection nodes
-		 * @returns {ObjectExplorerNode[]} The Object Explorer nodes for each saved connection
+		 * @returns The Object Explorer nodes for each saved connection
 		*/
 		export function getActiveConnectionNodes(): Thenable<ObjectExplorerNode[]>;
 
 		/**
 		 * Find Object Explorer nodes that match the given information
-		 * @param {string} connectionId The id of the connection that the node exists on
-		 * @param {string} type The type of the object to retrieve
-		 * @param {string} schema The schema of the object, if applicable
-		 * @param {string} name The name of the object
-		 * @param {string} database The database the object exists under, if applicable
-		 * @param {string[]} parentObjectNames A list of names of parent objects in the tree, ordered from highest to lowest level
+		 * @param connectionId The id of the connection that the node exists on
+		 * @param type The type of the object to retrieve
+		 * @param schema The schema of the object, if applicable
+		 * @param name The name of the object
+		 * @param database The database the object exists under, if applicable
+		 * @param parentObjectNames A list of names of parent objects in the tree, ordered from highest to lowest level
 		 * (for example when searching for a table's column, provide the name of its parent table for this argument)
 		 */
 		export function findNodes(connectionId: string, type: string, schema: string, name: string, database: string, parentObjectNames: string[]): Thenable<ObjectExplorerNode[]>;
 
 		/**
 		 * Get connectionProfile from sessionId
-		 * *@param {string} sessionId The id of the session that the node exists on
-		 * @returns {IConnectionProfile} The IConnecitonProfile for the session
+		 * @param sessionId The id of the session that the node exists on
+		 * @returns The IConnecitonProfile for the session
 		 */
 		export function getSessionConnectionProfile(sessionId: string): Thenable<IConnectionProfile>;
 
@@ -214,6 +217,44 @@ declare module 'azdata' {
 	export interface ConnectionInfo {
 
 		options: { [name: string]: any };
+	}
+
+	// Object Explorer interfaces  -----------------------------------------------------------------------
+	export interface ObjectExplorerSession {
+		success: boolean;
+		sessionId: string;
+		rootNode: NodeInfo;
+		errorMessage: string;
+	}
+
+	/**
+	 * A NodeInfo object represents an element in the Object Explorer tree under
+	 * a connection.
+	 */
+	export interface NodeInfo {
+		nodePath: string;
+		nodeType: string;
+		nodeSubType: string;
+		nodeStatus: string;
+		label: string;
+		isLeaf: boolean;
+		metadata: ObjectMetadata;
+		errorMessage: string;
+		/**
+		 * Optional iconType for the object in the tree. Currently this only supports
+		 * an icon name or SqlThemeIcon name, rather than a path to an icon.
+		 * If not defined, the nodeType + nodeStatus / nodeSubType values
+		 * will be used instead.
+		 */
+		iconType?: string | SqlThemeIcon;
+		/**
+		 * Informs who provides the children to a node, used by data explorer tree view api
+		 */
+		childProvider?: string;
+		/**
+		 * Holds the connection profile for nodes, used by data explorer tree view api
+		 */
+		payload?: any;
 	}
 
 	export interface IConnectionProfile extends ConnectionInfo {
@@ -365,7 +406,7 @@ declare module 'azdata' {
 		/**
 		 * options for all new server properties.
 		 */
-		options: {};
+		options: { [key: string]: any };
 	}
 
 	export interface DataProvider {
@@ -699,6 +740,10 @@ declare module 'azdata' {
 		flavor: string;
 	}
 
+	export interface QueryExecutionOptions {
+		options: Map<string, any>;
+	}
+
 	export interface QueryProvider extends DataProvider {
 		cancelQuery(ownerUri: string): Thenable<QueryCancelResult>;
 		runQuery(ownerUri: string, selection: ISelectionData, runOptions?: ExecutionPlanOptions): Thenable<void>;
@@ -709,6 +754,7 @@ declare module 'azdata' {
 		getQueryRows(rowData: QueryExecuteSubsetParams): Thenable<QueryExecuteSubsetResult>;
 		disposeQuery(ownerUri: string): Thenable<void>;
 		saveResults(requestParams: SaveResultsRequestParams): Thenable<SaveResultRequestResult>;
+		setQueryExecutionOptions(ownerUri: string, options: QueryExecutionOptions): Thenable<void>;
 
 		// Notifications
 		registerOnQueryComplete(handler: (result: QueryExecuteCompleteNotificationResult) => any): void;
@@ -1012,36 +1058,6 @@ declare module 'azdata' {
 	}
 
 	/**
-	 * A NodeInfo object represents an element in the Object Explorer tree under
-	 * a connection.
-	 */
-	export interface NodeInfo {
-		nodePath: string;
-		nodeType: string;
-		nodeSubType: string;
-		nodeStatus: string;
-		label: string;
-		isLeaf: boolean;
-		metadata: ObjectMetadata;
-		errorMessage: string;
-		/**
-		 * Optional iconType for the object in the tree. Currently this only supports
-		 * an icon name or SqlThemeIcon name, rather than a path to an icon.
-		 * If not defined, the nodeType + nodeStatus / nodeSubType values
-		 * will be used instead.
-		 */
-		iconType?: string | SqlThemeIcon;
-		/**
-		 * Informs who provides the children to a node, used by data explorer tree view api
-		 */
-		childProvider?: string;
-		/**
-		 * Holds the connection profile for nodes, used by data explorer tree view api
-		 */
-		payload?: any;
-	}
-
-	/**
 	 * A reference to a named icon. Currently only a subset of the SQL icons are available.
 	 * Using a theme icon is preferred over a custom icon as it gives theme authors the possibility to change the icons.
 	 */
@@ -1144,14 +1160,6 @@ declare module 'azdata' {
 		public readonly id: string;
 	}
 
-	// Object Explorer interfaces  -----------------------------------------------------------------------
-	export interface ObjectExplorerSession {
-		success: boolean;
-		sessionId: string;
-		rootNode: NodeInfo;
-		errorMessage: string;
-	}
-
 	export interface ObjectExplorerSessionResponse {
 		sessionId: string;
 	}
@@ -1225,6 +1233,10 @@ declare module 'azdata' {
 		handleSessionOpen(session: ObjectExplorerSession): Thenable<boolean>;
 
 		handleSessionClose(closeSessionInfo: ObjectExplorerCloseSessionInfo): void;
+	}
+
+	export interface IconProvider extends DataProvider {
+		getConnectionIconId(connection: IConnectionProfile, serverInfo: ServerInfo): Thenable<string>;
 	}
 
 	// Admin Services interfaces  -----------------------------------------------------------------------
@@ -1504,9 +1516,9 @@ declare module 'azdata' {
 
 	export interface AgentJobHistoryResult extends ResultStatus {
 		histories: AgentJobHistoryInfo[];
-		steps: AgentJobStepInfo[];
 		schedules: AgentJobScheduleInfo[];
 		alerts: AgentAlertInfo[];
+		steps: AgentJobStepInfo[];
 	}
 
 	export interface CreateAgentJobResult extends ResultStatus {
@@ -1698,6 +1710,209 @@ declare module 'azdata' {
 		deployDacpac(packageFilePath: string, databaseName: string, upgradeExisting: boolean, ownerUri: string, taskExecutionMode: TaskExecutionMode): Thenable<DacFxResult>;
 		generateDeployScript(packageFilePath: string, databaseName: string, scriptFilePath: string, ownerUri: string, taskExecutionMode: TaskExecutionMode): Thenable<DacFxResult>;
 		generateDeployPlan(packageFilePath: string, databaseName: string, ownerUri: string, taskExecutionMode: TaskExecutionMode): Thenable<GenerateDeployPlanResult>;
+	}
+
+	// Schema Compare interfaces  -----------------------------------------------------------------------
+	export interface SchemaCompareResult extends ResultStatus {
+		operationId: string;
+		areEqual: boolean;
+		differences: DiffEntry[];
+	}
+
+	export interface DiffEntry {
+		updateAction: SchemaUpdateAction;
+		differenceType: SchemaDifferenceType;
+		name: string;
+		sourceValue: string;
+		targetValue: string;
+		parent: DiffEntry;
+		children: DiffEntry[];
+		sourceScript: string;
+		targetScript: string;
+	}
+
+	export enum SchemaUpdateAction {
+		Delete = 0,
+		Change = 1,
+		Add = 2
+	}
+
+	export enum SchemaDifferenceType {
+		Object = 0,
+		Property = 1
+	}
+	export enum SchemaCompareEndpointType {
+		Database = 0,
+		Dacpac = 1
+	}
+	export interface SchemaCompareEndpointInfo {
+		endpointType: SchemaCompareEndpointType;
+		packageFilePath: string;
+		serverName: string;
+		databaseName: string;
+		ownerUri: string;
+	}
+
+	export interface SchemaCompareOptionsResult extends ResultStatus {
+		defaultDeploymentOptions: DeploymentOptions;
+	}
+
+	export interface DeploymentOptions {
+		ignoreTableOptions: boolean;
+		ignoreSemicolonBetweenStatements: boolean;
+		ignoreRouteLifetime: boolean;
+		ignoreRoleMembership: boolean;
+		ignoreQuotedIdentifiers: boolean;
+		ignorePermissions: boolean;
+		ignorePartitionSchemes: boolean;
+		ignoreObjectPlacementOnPartitionScheme: boolean;
+		ignoreNotForReplication: boolean;
+		ignoreLoginSids: boolean;
+		ignoreLockHintsOnIndexes: boolean;
+		ignoreKeywordCasing: boolean;
+		ignoreIndexPadding: boolean;
+		ignoreIndexOptions: boolean;
+		ignoreIncrement: boolean;
+		ignoreIdentitySeed: boolean;
+		ignoreUserSettingsObjects: boolean;
+		ignoreFullTextCatalogFilePath: boolean;
+		ignoreWhitespace: boolean;
+		ignoreWithNocheckOnForeignKeys: boolean;
+		verifyCollationCompatibility: boolean;
+		unmodifiableObjectWarnings: boolean;
+		treatVerificationErrorsAsWarnings: boolean;
+		scriptRefreshModule: boolean;
+		scriptNewConstraintValidation: boolean;
+		scriptFileSize: boolean;
+		scriptDeployStateChecks: boolean;
+		scriptDatabaseOptions: boolean;
+		scriptDatabaseCompatibility: boolean;
+		scriptDatabaseCollation: boolean;
+		runDeploymentPlanExecutors: boolean;
+		registerDataTierApplication: boolean;
+		populateFilesOnFileGroups: boolean;
+		noAlterStatementsToChangeClrTypes: boolean;
+		includeTransactionalScripts: boolean;
+		includeCompositeObjects: boolean;
+		allowUnsafeRowLevelSecurityDataMovement: boolean;
+		ignoreWithNocheckOnCheckConstraints: boolean;
+		ignoreFillFactor: boolean;
+		ignoreFileSize: boolean;
+		ignoreFilegroupPlacement: boolean;
+		doNotAlterReplicatedObjects: boolean;
+		doNotAlterChangeDataCaptureObjects: boolean;
+		disableAndReenableDdlTriggers: boolean;
+		deployDatabaseInSingleUserMode: boolean;
+		createNewDatabase: boolean;
+		compareUsingTargetCollation: boolean;
+		commentOutSetVarDeclarations: boolean;
+		blockWhenDriftDetected: boolean;
+		blockOnPossibleDataLoss: boolean;
+		backupDatabaseBeforeChanges: boolean;
+		allowIncompatiblePlatform: boolean;
+		allowDropBlockingAssemblies: boolean;
+		dropConstraintsNotInSource: boolean;
+		dropDmlTriggersNotInSource: boolean;
+		dropExtendedPropertiesNotInSource: boolean;
+		dropIndexesNotInSource: boolean;
+		ignoreFileAndLogFilePath: boolean;
+		ignoreExtendedProperties: boolean;
+		ignoreDmlTriggerState: boolean;
+		ignoreDmlTriggerOrder: boolean;
+		ignoreDefaultSchema: boolean;
+		ignoreDdlTriggerState: boolean;
+		ignoreDdlTriggerOrder: boolean;
+		ignoreCryptographicProviderFilePath: boolean;
+		verifyDeployment: boolean;
+		ignoreComments: boolean;
+		ignoreColumnCollation: boolean;
+		ignoreAuthorizer: boolean;
+		ignoreAnsiNulls: boolean;
+		generateSmartDefaults: boolean;
+		dropStatisticsNotInSource: boolean;
+		dropRoleMembersNotInSource: boolean;
+		dropPermissionsNotInSource: boolean;
+		dropObjectsNotInSource: boolean;
+		ignoreColumnOrder: boolean;
+		doNotDropObjectTypes: SchemaObjectType[];
+		excludeObjectTypes: SchemaObjectType[];
+	}
+
+	export enum SchemaObjectType {
+		Aggregates = 0,
+		ApplicationRoles = 1,
+		Assemblies = 2,
+		AssemblyFiles = 3,
+		AsymmetricKeys = 4,
+		BrokerPriorities = 5,
+		Certificates = 6,
+		ColumnEncryptionKeys = 7,
+		ColumnMasterKeys = 8,
+		Contracts = 9,
+		DatabaseOptions = 10,
+		DatabaseRoles = 11,
+		DatabaseTriggers = 12,
+		Defaults = 13,
+		ExtendedProperties = 14,
+		ExternalDataSources = 15,
+		ExternalFileFormats = 16,
+		ExternalTables = 17,
+		Filegroups = 18,
+		FileTables = 19,
+		FullTextCatalogs = 20,
+		FullTextStoplists = 21,
+		MessageTypes = 22,
+		PartitionFunctions = 23,
+		PartitionSchemes = 24,
+		Permissions = 25,
+		Queues = 26,
+		RemoteServiceBindings = 27,
+		RoleMembership = 28,
+		Rules = 29,
+		ScalarValuedFunctions = 30,
+		SearchPropertyLists = 31,
+		SecurityPolicies = 32,
+		Sequences = 33,
+		Services = 34,
+		Signatures = 35,
+		StoredProcedures = 36,
+		SymmetricKeys = 37,
+		Synonyms = 38,
+		Tables = 39,
+		TableValuedFunctions = 40,
+		UserDefinedDataTypes = 41,
+		UserDefinedTableTypes = 42,
+		ClrUserDefinedTypes = 43,
+		Users = 44,
+		Views = 45,
+		XmlSchemaCollections = 46,
+		Audits = 47,
+		Credentials = 48,
+		CryptographicProviders = 49,
+		DatabaseAuditSpecifications = 50,
+		DatabaseEncryptionKeys = 51,
+		DatabaseScopedCredentials = 52,
+		Endpoints = 53,
+		ErrorMessages = 54,
+		EventNotifications = 55,
+		EventSessions = 56,
+		LinkedServerLogins = 57,
+		LinkedServers = 58,
+		Logins = 59,
+		MasterKeys = 60,
+		Routes = 61,
+		ServerAuditSpecifications = 62,
+		ServerRoleMembership = 63,
+		ServerRoles = 64,
+		ServerTriggers = 65
+	}
+
+	export interface SchemaCompareServicesProvider extends DataProvider {
+		schemaCompare(sourceEndpointInfo: SchemaCompareEndpointInfo, targetEndpointInfo: SchemaCompareEndpointInfo, taskExecutionMode: TaskExecutionMode, deploymentOptions: DeploymentOptions): Thenable<SchemaCompareResult>;
+		schemaCompareGenerateScript(operationId: string, targetServerName: string, targetDatabaseName: string, taskExecutionMode: TaskExecutionMode): Thenable<ResultStatus>;
+		schemaComparePublishChanges(operationId: string, targetServerName: string, targetDatabaseName: string, taskExecutionMode: TaskExecutionMode): Thenable<ResultStatus>;
+		schemaCompareGetDefaultOptions(): Thenable<SchemaCompareOptionsResult>;
+		schemaCompareIncludeExcludeNode(operationId: string, diffEntry: DiffEntry, IncludeRequest: boolean, taskExecutionMode: TaskExecutionMode): Thenable<ResultStatus>;
 	}
 
 	// Security service interfaces ------------------------------------------------------------------------
@@ -2001,11 +2216,7 @@ declare module 'azdata' {
 		 * Launches a flyout dialog that will display the information on how to complete device
 		 * code OAuth login to the user. Only one flyout can be opened at once and each must be closed
 		 * by calling {@link endAutoOAuthDeviceCode}.
-		 * @param {string} providerId	ID of the provider that's requesting the flyout be opened
-		 * @param {string} title
-		 * @param {string} message
-		 * @param {string} userCode
-		 * @param {string} uri
+		 * @param providerId	ID of the provider that's requesting the flyout be opened
 		 */
 		export function beginAutoOAuthDeviceCode(providerId: string, title: string, message: string, userCode: string, uri: string): Thenable<void>;
 
@@ -2017,21 +2228,21 @@ declare module 'azdata' {
 		/**
 		 * Notifies the account management service that an account has updated (usually due to the
 		 * account going stale).
-		 * @param {Account} updatedAccount Account object with updated properties
+		 * @param updatedAccount Account object with updated properties
 		 */
 		export function accountUpdated(updatedAccount: Account): void;
 
 		/**
 		 * Gets all added accounts.
-		 * @returns {Thenable<Account>} Promise to return the accounts
+		 * @returns Promise to return the accounts
 		 */
 		export function getAllAccounts(): Thenable<Account[]>;
 
 		/**
 		 * Generates a security token by asking the account's provider
-		 * @param {Account} account Account to generate security token for (defaults to
+		 * @param account Account to generate security token for (defaults to
 		 * AzureResource.ResourceManagement if not given)
-		 * @return {Thenable<{}>} Promise to return the security token
+		 * @return Promise to return the security token
 		 */
 		export function getSecurityToken(account: Account, resource?: AzureResource): Thenable<{}>;
 
@@ -2056,9 +2267,14 @@ declare module 'azdata' {
 		accountType: string;
 
 		/**
-		 * A display name that identifies the account, such as "user@contoso.com".
+		 * A display name that identifies the account, such as "User Name".
 		 */
 		displayName: string;
+
+		/**
+		 * User id that identifies the account, such as "user@contoso.com".
+		 */
+		userId: string;
 	}
 
 	/**
@@ -2122,11 +2338,11 @@ declare module 'azdata' {
 	 * AccountProvider.refresh or AccountProvider.prompt are rejected with this error, the error
 	 * will not be reported to the user.
 	 */
-	export interface UserCancelledSignInError extends Error {
+	export interface PromptFailedResult {
 		/**
 		 * Type guard for differentiating user cancelled sign in errors from other errors
 		 */
-		userCancelledSignIn: boolean;
+		canceled: boolean;
 	}
 
 	/**
@@ -2160,16 +2376,16 @@ declare module 'azdata' {
 	export interface AccountProvider {
 		/**
 		 * Initializes the account provider with the accounts restored from the memento,
-		 * @param {Account[]} storedAccounts Accounts restored from the memento
-		 * @return {Thenable<Account[]>} Account objects after being rehydrated (if necessary)
+		 * @param storedAccounts Accounts restored from the memento
+		 * @return Account objects after being rehydrated (if necessary)
 		 */
 		initialize(storedAccounts: Account[]): Thenable<Account[]>;
 
 		/**
 		 * Generates a security token for the provided account
-		 * @param {Account} account The account to generate a security token for
-		 * @param {AzureResource} resource The resource to get the token for
-		 * @return {Thenable<{}>} Promise to return a security token object
+		 * @param account The account to generate a security token for
+		 * @param resource The resource to get the token for
+		 * @return Promise to return a security token object
 		 */
 		getSecurityToken(account: Account, resource: AzureResource): Thenable<{}>;
 
@@ -2177,7 +2393,7 @@ declare module 'azdata' {
 		 * Prompts the user to enter account information.
 		 * Returns an error if the user canceled the operation.
 		 */
-		prompt(): Thenable<Account>;
+		prompt(): Thenable<Account | PromptFailedResult>;
 
 		/**
 		 * Refreshes a stale account.
@@ -2185,7 +2401,7 @@ declare module 'azdata' {
 		 * Otherwise, returns a new updated account instance.
 		 * @param account - An account.
 		 */
-		refresh(account: Account): Thenable<Account>;
+		refresh(account: Account): Thenable<Account | PromptFailedResult>;
 
 		/**
 		 * Clears sensitive information for an account. To be called when account is removed
@@ -2347,16 +2563,6 @@ declare module 'azdata' {
 		export function registerWebviewProvider(widgetId: string, handler: (webview: DashboardWebview) => void): void;
 	}
 
-	export namespace window {
-		/**
-		 * @deprecated this method has been deprecated and will be removed in a future release, please use azdata.window.createWebViewDialog instead.
-		 * @param title
-		 */
-		export function createDialog(
-			title: string
-		): ModalDialog;
-	}
-
 	export namespace workspace {
 		/**
 		 * An event that is emitted when a [dashboard](#DashboardDocument) is opened.
@@ -2403,12 +2609,12 @@ declare module 'azdata' {
 	/**
 	 * Supports defining a model that can be instantiated as a view in the UI
 	 * @export
-	 * @interface ModelBuilder
 	 */
 	export interface ModelBuilder {
 		navContainer(): ContainerBuilder<NavContainer, any, any>;
 		divContainer(): DivBuilder;
 		flexContainer(): FlexBuilder;
+		splitViewContainer(): SplitViewBuilder;
 		dom(): ComponentBuilder<DomComponent>;
 		card(): ComponentBuilder<CardComponent>;
 		inputBox(): ComponentBuilder<InputBoxComponent>;
@@ -2416,6 +2622,7 @@ declare module 'azdata' {
 		radioButton(): ComponentBuilder<RadioButtonComponent>;
 		webView(): ComponentBuilder<WebViewComponent>;
 		editor(): ComponentBuilder<EditorComponent>;
+		diffeditor(): ComponentBuilder<DiffEditorComponent>;
 		text(): ComponentBuilder<TextComponent>;
 		button(): ComponentBuilder<ButtonComponent>;
 		dropDown(): ComponentBuilder<DropDownComponent>;
@@ -2466,6 +2673,11 @@ declare module 'azdata' {
 
 	}
 
+	// Building on top of flex item
+	export interface SplitViewBuilder extends ContainerBuilder<SplitViewContainer, SplitViewLayout, FlexItemLayout> {
+
+	}
+
 	export interface DivBuilder extends ContainerBuilder<DivContainer, DivLayout, DivItemLayout> {
 
 	}
@@ -2506,7 +2718,7 @@ declare module 'azdata' {
 		 * Creates a collection of child components and adds them all to this container
 		 *
 		 * @param formComponents the definitions
-		 * @param {*} [itemLayout] Optional layout for the child items
+		 * @param [itemLayout] Optional layout for the child items
 		 */
 		addFormItems(formComponents: Array<FormComponent | FormComponentGroup>, itemLayout?: FormItemLayout): void;
 
@@ -2514,7 +2726,7 @@ declare module 'azdata' {
 		 * Creates a child component and adds it to this container.
 		 *
 		 * @param formComponent the component to be added
-		 * @param {*} [itemLayout] Optional layout for this child item
+		 * @param [itemLayout] Optional layout for this child item
 		 */
 		addFormItem(formComponent: FormComponent | FormComponentGroup, itemLayout?: FormItemLayout): void;
 
@@ -2528,7 +2740,6 @@ declare module 'azdata' {
 
 		/**
 		 * Removes a from item from the from
-		 * @param formComponent
 		 */
 		removeFormItem(formComponent: FormComponent | FormComponentGroup): boolean;
 	}
@@ -2539,18 +2750,16 @@ declare module 'azdata' {
 		/**
 		 * Sends any updated properties of the component to the UI
 		 *
-		 * @returns {Thenable<void>} Thenable that completes once the update
+		 * @returns Thenable that completes once the update
 		 * has been applied in the UI
-		 * @memberof Component
 		 */
 		updateProperties(properties: { [key: string]: any }): Thenable<void>;
 
 		/**
 		 * Sends an updated property of the component to the UI
 		 *
-		 * @returns {Thenable<void>} Thenable that completes once the update
+		 * @returns Thenable that completes once the update
 		 * has been applied in the UI
-		 * @memberof Component
 		 */
 		updateProperty(key: string, value: any): Thenable<void>;
 
@@ -2596,6 +2805,7 @@ declare module 'azdata' {
 	export interface ToolbarComponent {
 		component: Component;
 		title?: string;
+		toolbarSeparatorAfter?: boolean;
 	}
 
 	/**
@@ -2616,7 +2826,7 @@ declare module 'azdata' {
 		 * Creates a collection of child components and adds them all to this container
 		 *
 		 * @param itemConfigs the definitions
-		 * @param {*} [itemLayout] Optional layout for the child items
+		 * @param [itemLayout] Optional layout for the child items
 		 */
 		addItems(itemConfigs: Array<Component>, itemLayout?: TItemLayout): void;
 
@@ -2624,8 +2834,8 @@ declare module 'azdata' {
 		 * Creates a child component and adds it to this container.
 		 * Adding component to multiple containers is not supported
 		 *
-		 * @param {Component} component the component to be added
-		 * @param {*} [itemLayout] Optional layout for this child item
+		 * @param component the component to be added
+		 * @param [itemLayout] Optional layout for this child item
 		 */
 		addItem(component: Component, itemLayout?: TItemLayout): void;
 
@@ -2634,7 +2844,7 @@ declare module 'azdata' {
 		 * Adding component to multiple containers is not supported
 		 * @param component the component to be added
 		 * @param index the index to insert the component to
-		 * @param {*} [itemLayout] Optional layout for this child item
+		 * @param [itemLayout] Optional layout for this child item
 		 */
 		insertItem(component: Component, index: number, itemLayout?: TItemLayout): void;
 
@@ -2647,7 +2857,7 @@ declare module 'azdata' {
 		/**
 		 * Defines the layout for this container
 		 *
-		 * @param {TLayout} layout object
+		 * @param layout object
 		 */
 		setLayout(layout: TLayout): void;
 	}
@@ -2704,6 +2914,19 @@ declare module 'azdata' {
 		 * Without this the component will fail to correctly size itself.
 		 */
 		position?: string;
+	}
+
+	export interface SplitViewLayout extends FlexLayout {
+
+		/**
+		 * Orientation of the views inside split
+		 */
+		orientation: string;
+
+		/**
+		 * SplitView height
+		 */
+		splitViewHeight: number | string;
 	}
 
 	export interface FlexItemLayout {
@@ -2771,9 +2994,16 @@ declare module 'azdata' {
 	}
 
 	export interface DivContainer extends Container<DivLayout, DivItemLayout>, DivContainerProperties {
+		/**
+		 * An event called when the div is clicked
+		 */
+		onDidClick: vscode.Event<any>;
 	}
 
 	export interface FlexContainer extends Container<FlexLayout, FlexItemLayout> {
+	}
+
+	export interface SplitViewContainer extends Container<SplitViewLayout, FlexItemLayout> {
 	}
 
 	export interface FormContainer extends Container<FormLayout, FormItemLayout> {
@@ -2894,7 +3124,28 @@ declare module 'azdata' {
 		value: string;
 		width?: number;
 		cssClass?: string;
+		headerCssClass?: string;
 		toolTip?: string;
+		type?: ColumnType;
+		options?: CheckboxColumnOption | TextColumnOption;
+	}
+
+	export enum ColumnType {
+		text = 0,
+		checkBox = 1,
+		button = 2
+	}
+
+	export interface CheckboxColumnOption {
+		actionOnCheckbox: ActionOnCellCheckboxCheck;
+	}
+
+	export interface TextColumnOption {
+	}
+
+	export enum ActionOnCellCheckboxCheck {
+		selectRow = 0,
+		customAction = 1
 	}
 
 	export interface TableComponentProperties extends ComponentProperties {
@@ -2934,6 +3185,7 @@ declare module 'azdata' {
 	export interface TextComponentProperties {
 		value?: string;
 		links?: LinkArea[];
+		CSSStyles?: { [key: string]: string };
 	}
 
 	export interface LinkArea {
@@ -2950,6 +3202,7 @@ declare module 'azdata' {
 		value?: string | CategoryValue;
 		values?: string[] | CategoryValue[];
 		editable?: boolean;
+		fireOnTextChange?: boolean;
 	}
 
 	export interface DeclarativeTableColumn {
@@ -3033,6 +3286,11 @@ declare module 'azdata' {
 		 * This is used when its child component is webview
 		 */
 		yOffsetChange?: number;
+
+		/**
+		 * Indicates whether the element is clickable
+		 */
+		clickable?: boolean;
 	}
 
 	export interface CardComponent extends Component, CardProperties {
@@ -3089,8 +3347,19 @@ declare module 'azdata' {
 		onRowSelected: vscode.Event<any>;
 	}
 
+	export interface ICheckboxCellActionEventArgs extends ICellActionEventArgs {
+		checked: boolean;
+	}
+
+	interface ICellActionEventArgs {
+		row: number;
+		column: number;
+		columnName: number;
+	}
+
 	export interface TableComponent extends Component, TableComponentProperties {
 		onRowSelected: vscode.Event<any>;
+		onCellAction?: vscode.Event<ICellActionEventArgs>;
 	}
 
 	export interface FileBrowserTreeComponent extends Component, FileBrowserTreeProperties {
@@ -3146,6 +3415,52 @@ declare module 'azdata' {
 		 */
 		minimumHeight: number;
 
+	}
+
+	export interface DiffEditorComponent extends Component {
+		/**
+		 * The content inside the left text editor
+		 */
+		contentLeft: string;
+		/**
+		 * The content inside the right text editor
+		 */
+		contentRight: string;
+		/**
+		 * The languge mode for this text editor. The language mode is SQL by default.
+		 */
+		languageMode: string;
+		/**
+		 * The left editor Uri which will be used as a reference for VSCode Language Service.
+		 * Currently this is auto-generated by the framework but can be queried after
+		 * view initialization is completed
+		 */
+		readonly editorUriLeft: string;
+		/**
+		 * The right editor Uri which will be used as a reference for VSCode Language Service.
+		 * Currently this is auto-generated by the framework but can be queried after
+		 * view initialization is completed
+		 */
+		readonly editorUriRight: string;
+		/**
+		 * An event called when the editor content is updated
+		 */
+		readonly onContentChanged: vscode.Event<any>;
+
+		/**
+		 * An event called when the editor is created
+		 */
+		readonly onEditorCreated: vscode.Event<any>;
+
+		/**
+		 * Toggle for whether the editor should be automatically resized or not
+		 */
+		isAutoResizable: boolean;
+
+		/**
+		 * Minimum height for editor component
+		 */
+		minimumHeight: number;
 	}
 
 	export interface ButtonComponent extends Component, ButtonProperties {
@@ -3249,348 +3564,16 @@ declare module 'azdata' {
 
 	export namespace window {
 		/**
-		 * @deprecated this namespace has been deprecated and will be removed in a future release, please use the methods under azdata.window namespace.
+		 * creates a web view dialog
 		 */
-		export namespace modelviewdialog {
-			/**
-			 * Create a dialog with the given title
-			 * @param title The title of the dialog, displayed at the top
-			 */
-			export function createDialog(title: string, dialogName?: string): Dialog;
-
-			/**
-			 * Create a dialog tab which can be included as part of the content of a dialog
-			 * @param title The title of the page, displayed on the tab to select the page
-			 */
-			export function createTab(title: string): DialogTab;
-
-			/**
-			 * Create a button which can be included in a dialog
-			 * @param label The label of the button
-			 */
-			export function createButton(label: string): Button;
-
-			/**
-			 * Opens the given dialog if it is not already open
-			 */
-			export function openDialog(dialog: Dialog): void;
-
-			/**
-			 * Closes the given dialog if it is open
-			 */
-			export function closeDialog(dialog: Dialog): void;
-
-			/**
-			 * Create a wizard page with the given title, for inclusion in a wizard
-			 * @param title The title of the page
-			 */
-			export function createWizardPage(title: string): WizardPage;
-
-			/**
-			 * Create a wizard with the given title and pages
-			 * @param title The title of the wizard
-			 */
-			export function createWizard(title: string): Wizard;
-
-			/**
-			 * Used to control whether a message in a dialog/wizard is displayed as an error,
-			 * warning, or informational message. Default is error.
-			 */
-			export enum MessageLevel {
-				Error = 0,
-				Warning = 1,
-				Information = 2
-			}
-
-			/**
-			 * A message shown in a dialog. If the level is not set it defaults to error.
-			 */
-			export type DialogMessage = {
-				readonly text: string,
-				readonly description?: string,
-				readonly level?: MessageLevel
-			};
-
-			export interface ModelViewPanel {
-				/**
-				 * Register model view content for the dialog.
-				 * Doesn't do anything if model view is already registered
-				 */
-				registerContent(handler: (view: ModelView) => Thenable<void>): void;
-
-				/**
-				 * Returns the model view content if registered. Returns undefined if model review is not registered
-				 */
-				readonly modelView: ModelView;
-
-				/**
-				 * Whether the panel's content is valid
-				 */
-				readonly valid: boolean;
-
-				/**
-				 * Fired whenever the panel's valid property changes
-				 */
-				readonly onValidityChanged: vscode.Event<boolean>;
-			}
-
-			// Model view dialog classes
-			export interface Dialog extends ModelViewPanel {
-				/**
-				 * The title of the dialog
-				 */
-				title: string;
-
-				/**
-				 * The content of the dialog. If multiple tabs are given they will be displayed with tabs
-				 * If a string is given, it should be the ID of the dialog's model view content
-				 */
-				content: string | DialogTab[];
-
-				/**
-				 * The ok button
-				 */
-				okButton: Button;
-
-				/**
-				 * The cancel button
-				 */
-				cancelButton: Button;
-
-				/**
-				 * Any additional buttons that should be displayed
-				 */
-				customButtons: Button[];
-
-				/**
-				 * Set the informational message shown in the dialog. Hidden when the message is
-				 * undefined or the text is empty or undefined. The default level is error.
-				 */
-				message: DialogMessage;
-
-				/**
-				 * Set the dialog name when opening
-				 * the dialog for telemetry
-				 */
-				dialogName?: string;
-
-				/**
-				 * Register a callback that will be called when the user tries to click done. Only
-				 * one callback can be registered at once, so each registration call will clear
-				 * the previous registration.
-				 * @param validator The callback that gets executed when the user tries to click
-				 * done. Return true to allow the dialog to close or false to block it from closing
-				 */
-				registerCloseValidator(validator: () => boolean | Thenable<boolean>): void;
-
-				/**
-				 * Register an operation to run in the background when the dialog is done
-				 * @param operationInfo Operation Information
-				 */
-				registerOperation(operationInfo: BackgroundOperationInfo): void;
-			}
-
-			export interface DialogTab extends ModelViewPanel {
-				/**
-				 * The title of the tab
-				 */
-				title: string;
-
-				/**
-				 * A string giving the ID of the tab's model view content
-				 */
-				content: string;
-			}
-
-			export interface Button {
-				/**
-				 * The label displayed on the button
-				 */
-				label: string;
-
-				/**
-				 * Whether the button is enabled
-				 */
-				enabled: boolean;
-
-				/**
-				 * Whether the button is hidden
-				 */
-				hidden: boolean;
-
-				/**
-				 * Raised when the button is clicked
-				 */
-				readonly onClick: vscode.Event<void>;
-			}
-
-			export interface WizardPageChangeInfo {
-				/**
-				 * The page number that the wizard changed from
-				 */
-				lastPage: number;
-
-				/**
-				 * The new page number or undefined if the user is closing the wizard
-				 */
-				newPage: number;
-			}
-
-			export interface WizardPage extends ModelViewPanel {
-				/**
-				 * The title of the page
-				 */
-				title: string;
-
-				/**
-				 * A string giving the ID of the page's model view content
-				 */
-				content: string;
-
-				/**
-				 * Any additional buttons that should be displayed while the page is open
-				 */
-				customButtons: Button[];
-
-				/**
-				 * Whether the page is enabled. If the page is not enabled, the user will not be
-				 * able to advance to it. Defaults to true.
-				 */
-				enabled: boolean;
-
-				/**
-				 * An optional description for the page. If provided it will be displayed underneath the page title.
-				 */
-				description: string;
-			}
-
-			export interface Wizard {
-				/**
-				 * The title of the wizard
-				 */
-				title: string;
-
-				/**
-				 * The wizard's pages. Pages can be added/removed while the dialog is open by using
-				 * the addPage and removePage methods
-				 */
-				pages: WizardPage[];
-
-				/**
-				 * The index in the pages array of the active page, or undefined if the wizard is
-				 * not currently visible
-				 */
-				readonly currentPage: number;
-
-				/**
-				 * The done button
-				 */
-				doneButton: Button;
-
-				/**
-				 * The cancel button
-				 */
-				cancelButton: Button;
-
-				/**
-				 * The generate script button
-				 */
-				generateScriptButton: Button;
-
-				/**
-				 * The next button
-				 */
-				nextButton: Button;
-
-				/**
-				 * The back button
-				 */
-				backButton: Button;
-
-				/**
-				 * Any additional buttons that should be displayed for all pages of the dialog. If
-				 * buttons are needed for specific pages they can be added using the customButtons
-				 * property on each page.
-				 */
-				customButtons: Button[];
-
-				/**
-				 * When set to false page titles and descriptions will not be displayed at the top
-				 * of each wizard page. The default is true.
-				 */
-				displayPageTitles: boolean;
-
-				/**
-				 * Event fired when the wizard's page changes, containing information about the
-				 * previous page and the new page
-				 */
-				onPageChanged: vscode.Event<WizardPageChangeInfo>;
-
-				/**
-				 * Add a page to the wizard at the given index
-				 * @param page The page to add
-				 * @param index The index in the pages array to add the page at, or undefined to
-				 * add it at the end
-				 */
-				addPage(page: WizardPage, index?: number): Thenable<void>;
-
-				/**
-				 * Remove the page at the given index from the wizard
-				 * @param index The index in the pages array to remove
-				 */
-				removePage(index: number): Thenable<void>;
-
-				/**
-				 * Go to the page at the given index in the pages array.
-				 * @param index The index of the page to go to
-				 */
-				setCurrentPage(index: number): Thenable<void>;
-
-				/**
-				 * Open the wizard. Does nothing if the wizard is already open.
-				 */
-				open(): Thenable<void>;
-
-				/**
-				 * Close the wizard. Does nothing if the wizard is not open.
-				 */
-				close(): Thenable<void>;
-
-				/**
-				 * Register a callback that will be called when the user tries to navigate by
-				 * changing pages or clicking done. Only one callback can be registered at once, so
-				 * each registration call will clear the previous registration.
-				 * @param validator The callback that gets executed when the user tries to
-				 * navigate. Return true to allow the navigation to proceed, or false to
-				 * cancel it.
-				 */
-				registerNavigationValidator(validator: (pageChangeInfo: WizardPageChangeInfo) => boolean | Thenable<boolean>): void;
-
-				/**
-				 * Set the informational message shown in the wizard. Hidden when the message is
-				 * undefined or the text is empty or undefined. The default level is error.
-				 */
-				message: DialogMessage;
-
-				/**
-				 * Register an operation to run in the background when the wizard is done
-				 * @param operationInfo Operation Information
-				 */
-				registerOperation(operationInfo: BackgroundOperationInfo): void;
-			}
-		}
-
-		/**
- 		 * creates a web view dialog
- 		 * @param title
- 		 */
 		export function createWebViewDialog(title: string): ModalDialog;
 
 		/**
 		 * Create a dialog with the given title
 		 * @param title The title of the dialog, displayed at the top
+		 * @param isWide Indicates whether the dialog is wide or normal
 		 */
-		export function createModelViewDialog(title: string, dialogName?: string): Dialog;
+		export function createModelViewDialog(title: string, dialogName?: string, isWide?: boolean): Dialog;
 
 		/**
 		 * Create a dialog tab which can be included as part of the content of a dialog
@@ -3674,6 +3657,11 @@ declare module 'azdata' {
 			 * The title of the dialog
 			 */
 			title: string;
+
+			/**
+			 * Indicates the width of the dialog
+			 */
+			isWide: boolean;
 
 			/**
 			 * The content of the dialog. If multiple tabs are given they will be displayed with tabs
@@ -3924,7 +3912,7 @@ declare module 'azdata' {
 			| 'executionPlan';
 
 		export interface QueryEventListener {
-			onQueryEvent(type: QueryEvent, document: queryeditor.QueryDocument, args: any);
+			onQueryEvent(type: QueryEvent, document: queryeditor.QueryDocument, args: any): void;
 		}
 
 		// new extensibility interfaces
@@ -3933,11 +3921,8 @@ declare module 'azdata' {
 
 			uri: string;
 
-			// get the document's execution options
-			getOptions(): Map<string, string>;
-
 			// set the document's execution options
-			setOptions(options: Map<string, string>): void;
+			setExecutionOptions(options: Map<string, any>): Thenable<void>;
 
 			// tab content is build using the modelview UI builder APIs
 			// probably should rename DialogTab class since it is useful outside dialogs
@@ -3946,14 +3931,14 @@ declare module 'azdata' {
 
 		/**
 		 * Make connection for the query editor
-		 * @param {string} fileUri file URI for the query editor
-		 * @param {string} connectionId connection ID
+		 * @param fileUri file URI for the query editor
+		 * @param connectionId connection ID
 		 */
 		export function connect(fileUri: string, connectionId: string): Thenable<void>;
 
 		/**
 		 * Run query if it is a query editor and it is already opened.
-		 * @param {string} fileUri file URI for the query editor
+		 * @param fileUri file URI for the query editor
 		 */
 		export function runQuery(fileUri: string, options?: Map<string, string>): void;
 
@@ -3962,7 +3947,10 @@ declare module 'azdata' {
 		 */
 		export function registerQueryEventListener(listener: queryeditor.QueryEventListener): void;
 
-		export function getQueryDocument(fileUri: string): queryeditor.QueryDocument
+		/**
+		 * Get a QueryDocument object for a file URI
+		 */
+		export function getQueryDocument(fileUri: string): Thenable<queryeditor.QueryDocument>;
 	}
 
 	/**
@@ -4022,7 +4010,9 @@ declare module 'azdata' {
 		AgentServicesProvider = 'AgentServicesProvider',
 		CapabilitiesProvider = 'CapabilitiesProvider',
 		DacFxServicesProvider = 'DacFxServicesProvider',
+		SchemaCompareServicesProvider = 'SchemaCompareServicesProvider',
 		ObjectExplorerNodeProvider = 'ObjectExplorerNodeProvider',
+		IconProvider = 'IconProvider'
 	}
 
 	export namespace dataprotocol {
@@ -4040,19 +4030,30 @@ declare module 'azdata' {
 		export function getProvidersByType<T extends DataProvider>(providerType: DataProviderType): T[];
 	}
 
+
 	/**
 	 * Context object passed as an argument to command callbacks.
-	 * Defines the key properties required to identify a node in the object
-	 * explorer tree and take action against it.
+	 * Defines properties that can be sent for any connected context,
+	 * whether that is the Object Explorer context menu or a command line
+	 * startup argument.
 	 */
-	export interface ObjectExplorerContext {
 
+	export interface ConnectedContext {
 		/**
 		 * The connection information for the selected object.
 		 * Note that the connection is not guaranteed to be in a connected
 		 * state on click.
 		 */
 		connectionProfile: IConnectionProfile;
+	}
+
+	/**
+	 * Context object passed as an argument to command callbacks.
+	 * Defines the key properties required to identify a node in the object
+	 * explorer tree and take action against it.
+	 */
+	export interface ObjectExplorerContext extends ConnectedContext {
+
 		/**
 		 * Defines whether this is a Connection-level object.
 		 * If not, the object is expected to be a child object underneath
@@ -4142,8 +4143,8 @@ declare module 'azdata' {
 	export namespace connection {
 		/**
 		 * List the databases that can be accessed from the given connection
-		 * @param {string} connectionId The ID of the connection
-		 * @returns {string[]} An list of names of databases
+		 * @param connectionId The ID of the connection
+		 * @returns An list of names of databases
 		 */
 		export function listDatabases(connectionId: string): Thenable<string[]>;
 
@@ -4158,7 +4159,6 @@ declare module 'azdata' {
 		/**
 		 * Opens the connection dialog, calls the callback with the result. If connection was successful
 		 * returns the connection otherwise returns undefined
-		 * @param callback
 		 */
 		export function openConnectionDialog(providers?: string[], initialConnectionProfile?: IConnectionProfile, connectionCompletionOptions?: IConnectionCompletionOptions): Thenable<connection.Connection>;
 
@@ -4166,14 +4166,12 @@ declare module 'azdata' {
 		 * Opens the connection and add it to object explorer and opens the dashboard and returns the ConnectionResult
 		 * @param connectionProfile connection profile
 		 */
-		export function connect(connectionProfile: IConnectionProfile): Thenable<ConnectionResult>;
+		export function connect(connectionProfile: IConnectionProfile, saveConnection?: boolean, showDashboard?: boolean): Thenable<ConnectionResult>;
 	}
 
 	export namespace nb {
 		/**
 		 * All notebook documents currently known to the system.
-		 *
-		 * @readonly
 		 */
 		export let notebookDocuments: NotebookDocument[];
 
@@ -4355,6 +4353,21 @@ declare module 'azdata' {
 			 * @return A promise that resolves with a value indicating if the cell was run or not.
 			 */
 			runCell(cell?: NotebookCell): Thenable<boolean>;
+
+			/**
+			 * Kicks off execution of all code cells. Thenable will resolve only when full execution of all cells is completed.
+			 */
+			runAllCells(): Thenable<boolean>;
+
+			/** Clears the outputs of all code cells in a Notebook
+			* @return A promise that resolves with a value indicating if the outputs are cleared or not.
+			*/
+			clearAllOutputs(): Thenable<boolean>;
+
+			/**
+			 * Changes the Notebook's kernel. Thenable will resolve only after kernel change is complete.
+			 */
+			changeKernel(kernel: IKernelSpec): Thenable<boolean>;
 		}
 
 		export interface NotebookCell {
@@ -4389,14 +4402,19 @@ declare module 'azdata' {
 			providerId?: string;
 
 			/**
-			 * Optional ID indicating the initial connection to use for this editor
+			 * Optional profile indicating the initial connection to use for this editor
 			 */
-			connectionId?: string;
+			connectionProfile?: IConnectionProfile;
 
 			/**
 			 * Default kernel for notebook
 			 */
 			defaultKernel?: nb.IKernelSpec;
+
+			/**
+			 * Optional content used to give an initial notebook state
+			 */
+			initialContent?: nb.INotebookContents | string;
 		}
 
 		/**
@@ -4412,10 +4430,17 @@ declare module 'azdata' {
 			 */
 			cells: NotebookCell[];
 			/**
-			 * The [change kind](#TextEditorSelectionChangeKind) which has triggered this
+			 * The [change kind](#NotebookChangeKind) which has triggered this
 			 * event. Can be `undefined`.
 			 */
-			kind?: vscode.TextEditorSelectionChangeKind;
+			kind?: NotebookChangeKind;
+		}
+
+		export enum NotebookChangeKind {
+			ContentUpdated = 0,
+			MetadataUpdated = 1,
+			Save = 2,
+			CellExecuted = 3
 		}
 
 		/**
@@ -4471,6 +4496,7 @@ declare module 'azdata' {
 
 		export interface IStandardKernel {
 			readonly name: string;
+			readonly displayName: string;
 			readonly connectionProviderIds: string[];
 		}
 
@@ -4579,7 +4605,7 @@ declare module 'azdata' {
 
 		export interface ILanguageInfo {
 			name: string;
-			version: string;
+			version?: string;
 			mimetype?: string;
 			codemirror_mode?: string | ICodeMirrorMode;
 		}
@@ -4637,7 +4663,7 @@ declare module 'azdata' {
 			 * Mime bundle expected to contain mime type -> contents mappings.
 			 * This is dynamic and is controlled by kernels, so cannot be more specific
 			 */
-			data: {};
+			data: { [key: string]: any };
 			/**
 			 * Optional metadata, also a mime bundle
 			 */
@@ -4786,6 +4812,7 @@ declare module 'azdata' {
 			readonly id: string;
 			readonly name: string;
 			readonly supportsIntellisense: boolean;
+			readonly requiresConnection?: boolean;
 			/**
 			 * Test whether the kernel is ready.
 			 */
@@ -5145,6 +5172,10 @@ declare module 'azdata' {
 		 */
 		export interface IStdinMessage extends IMessage {
 			channel: 'stdin';
+			content: {
+				prompt: string;
+				password: boolean;
+			};
 		}
 
 		/**
