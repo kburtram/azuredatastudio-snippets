@@ -31,6 +31,11 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	let documents = vscode.workspace.textDocuments;
+	documents.forEach((document) => {
+		onDidOpenTextDocument(document);
+	});
+
 	vscode.workspace.onDidOpenTextDocument(params => onDidOpenTextDocument(params));
 
 	azdata.queryeditor.registerQueryEventListener({
