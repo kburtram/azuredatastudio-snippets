@@ -11,6 +11,16 @@ let toggleOn: boolean = false;
 let statusView = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
 statusView.text = 'Query Plan watcher on';
 
+export async function onDidOpenTextDocument(doc: vscode.TextDocument): Promise<void> {	
+	let queryDoc = await azdata.queryeditor.getQueryDocument(doc.uri.toString());
+	if (queryDoc) {
+		let options: Map<string, any> = new Map<string, any>();
+		options['includeActualExecutionPlanXml'] = true;
+		queryDoc.setExecutionOptions(options);
+	}
+}
+
+
 export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('queryplan.ToggleProcessPlan', () => {
 		toggleOn = !toggleOn;
@@ -20,6 +30,13 @@ export function activate(context: vscode.ExtensionContext) {
 			statusView.hide();
 		}
 	});
+
+	let documents = vscode.workspace.textDocuments;
+	documents.forEach((document) => {
+		onDidOpenTextDocument(document);
+	});
+
+	vscode.workspace.onDidOpenTextDocument(params => onDidOpenTextDocument(params));
 
 	azdata.queryeditor.registerQueryEventListener({
 		onQueryEvent(type: azdata.queryeditor.QueryEvent, document: azdata.queryeditor.QueryDocument, args: any) {
