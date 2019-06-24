@@ -94,6 +94,7 @@ namespace AzureDataStudio.Localization
 
             if (string.Equals(this.Action, CommandOptions.PathMapAction, StringComparison.OrdinalIgnoreCase)
                 && (string.IsNullOrWhiteSpace(this.SourceDirectoryPath)
+                || string.IsNullOrWhiteSpace(this.ResourceDirectoryPath)
                 || string.IsNullOrWhiteSpace(this.PathMapping)))
             {
                 return false;
