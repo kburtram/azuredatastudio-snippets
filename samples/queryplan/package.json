@@ -22,7 +22,9 @@
   "extensionDependencies": [
     "Microsoft.mssql"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "pretty-data": "^0.40.0"
+  },
   "devDependencies": {
     "decache": "^4.1.0",
     "del": "^2.2.1",
