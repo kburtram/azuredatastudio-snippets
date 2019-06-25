@@ -6,6 +6,7 @@
 
 import * as azdata from 'azdata';
 import * as vscode from 'vscode';
+const pd = require('pretty-data').pd;
 
 let toggleOn: boolean = false;
 let statusView = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
@@ -19,7 +20,6 @@ export async function onDidOpenTextDocument(doc: vscode.TextDocument): Promise<v
 		queryDoc.setExecutionOptions(options);
 	}
 }
-
 
 export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('queryplan.ToggleProcessPlan', () => {
@@ -65,8 +65,37 @@ export function activate(context: vscode.ExtensionContext) {
 
 					let tab = azdata.window.createTab('Form View Watcher');
 					tab.registerContent(async view => {
+						let planXml = <string>args;
 						let fileNameTextBox = view.modelBuilder.inputBox().component();
 						let xmlTextBox = view.modelBuilder.inputBox().component();
+
+						let openButton = view.modelBuilder.button().withProperties({
+							label: 'Open XML',
+						}).component();
+
+						openButton.onDidClick(async () => {
+							try {
+								planXml = pd.xml(planXml);
+							} catch (e) {
+								// If Xml fails to parse, fall back on original Xml content
+							}
+
+							vscode.workspace.openTextDocument({ language: 'xml' }).then((doc: vscode.TextDocument) => {
+								vscode.window.showTextDocument(doc, 1, false).then(editor => {
+									editor.edit(edit => {
+										edit.insert(new vscode.Position(0, 0), planXml);
+									}).then(result => {
+										if (!result) {
+											vscode.window.showErrorMessage('Cannot open file');
+										}
+									});
+								}, (error: any) => {
+									vscode.window.showErrorMessage(error);
+								});
+							}, (error: any) => {
+								vscode.window.showErrorMessage(error);
+							});
+						});
 
 						let formModel = view.modelBuilder.formContainer()
 							.withFormItems([{
@@ -75,12 +104,15 @@ export function activate(context: vscode.ExtensionContext) {
 							}, {
 								component: xmlTextBox,
 								title: 'Plan XML'
-							}]).withLayout({ width: '100%' }).component();
+							}, {
+								component: openButton,
+								title: 'Open XML'
+							}]).withLayout({ width: '100%' }).component();							
 
 						await view.initializeModel(formModel);
 
 						fileNameTextBox.value = document.uri;
-						xmlTextBox.value = <string>args;
+						xmlTextBox.value = planXml;
 					});
 
 					document.createQueryTab(tab);
