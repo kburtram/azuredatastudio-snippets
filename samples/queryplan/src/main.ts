@@ -12,7 +12,7 @@ let toggleOn: boolean = false;
 let statusView = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
 statusView.text = 'Query Plan watcher on';
 
-export async function onDidOpenTextDocument(doc: vscode.TextDocument): Promise<void> {	
+async function onDidOpenTextDocument(doc: vscode.TextDocument): Promise<void> {	
 	let queryDoc = await azdata.queryeditor.getQueryDocument(doc.uri.toString());
 	if (queryDoc) {
 		let options: Map<string, any> = new Map<string, any>();
@@ -21,7 +21,25 @@ export async function onDidOpenTextDocument(doc: vscode.TextDocument): Promise<v
 	}
 }
 
+let hasInitializedQueryOptions: boolean = false;
+
 export function activate(context: vscode.ExtensionContext) {
+	// set query options on open documents once the MSSQL connection provider is available
+	setTimeout(function setOptionsWhenReady() {
+		if (!hasInitializedQueryOptions) {		
+			let connection = azdata.dataprotocol.getProvider<azdata.ConnectionProvider>('MSSQL', azdata.DataProviderType.ConnectionProvider);
+			if (connection) {
+				hasInitializedQueryOptions = true;
+				let documents = vscode.workspace.textDocuments;
+				documents.forEach((document) => {
+					onDidOpenTextDocument(document);
+				});
+			} else {
+				setTimeout(setOptionsWhenReady, 500);
+			}
+		}
+	}, 500);
+
 	vscode.commands.registerCommand('queryplan.ToggleProcessPlan', () => {
 		toggleOn = !toggleOn;
 		if (toggleOn) {
@@ -29,11 +47,6 @@ export function activate(context: vscode.ExtensionContext) {
 		} else {
 			statusView.hide();
 		}
-	});
-
-	let documents = vscode.workspace.textDocuments;
-	documents.forEach((document) => {
-		onDidOpenTextDocument(document);
 	});
 
 	vscode.workspace.onDidOpenTextDocument(params => onDidOpenTextDocument(params));
