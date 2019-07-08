@@ -18,20 +18,22 @@ namespace AzureDataStudio.Localization
     {
         private string directory;
         private PathMap pathMap;
+        private string directoryPrefix;
 
         private List<string> resourceFiles = new List<string>();
 
         public Dictionary<string, Dictionary<string, object>> resourceList = new Dictionary<string, Dictionary<string, object>>();
 
-        public ResourceReader(string directory, PathMap pathMap = null)
+        public ResourceReader(string directory, PathMap pathMap = null, string directoryPrefix = "\\src\\")
         {
             this.directory = directory;
             this.pathMap = pathMap;
+            this.directoryPrefix = directoryPrefix;
         }
 
         public void Read()
         {
-            DirectoryWalk(this.directory);
+            DirectoryWalk(this.directory + directoryPrefix, directoryPrefix.Length);
         }
 
         public string[] FindResources(string filePath)
@@ -63,7 +65,7 @@ namespace AzureDataStudio.Localization
             return parsedFile;
         }
 
-        private void DirectoryWalk(string dir)
+        private void DirectoryWalk(string dir, int prefixLen)
         {
             try
             {
@@ -74,7 +76,7 @@ namespace AzureDataStudio.Localization
                         string extension = ".i18n.json";
                         if (f.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                         {
-                            int startIndex = this.directory.Length + ("\\src\\".Length);
+                            int startIndex = this.directory.Length + (prefixLen);
                             string parsedFile = CleanUpPath(startIndex, f, extension);
                             if (this.pathMap != null)
                             {
@@ -92,7 +94,7 @@ namespace AzureDataStudio.Localization
                             Console.WriteLine(f);
                         }
                     }
-                    DirectoryWalk(d);
+                    DirectoryWalk(d, prefixLen);
                 }
             }
             catch (Exception ex)
