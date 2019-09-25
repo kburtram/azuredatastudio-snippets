@@ -42,7 +42,7 @@ namespace AzureDataStudio.Localization
                 }
 
                 ResourceReader resourceReader = new ResourceReader(
-                    commandOptions.ResourceDirectoryPath, 
+                    commandOptions.ResourceDirectoryPath,
                     mappings);
                 resourceReader.Read();
 
@@ -59,6 +59,15 @@ namespace AzureDataStudio.Localization
 
                 PathMapper mapper = new PathMapper(commandOptions.SourceDirectoryPath, resourceReader);
                 mapper.Write(commandOptions.PathMapping);
+            }
+            else if (string.Equals(
+                commandOptions.Action,
+                CommandOptions.ConvertAction,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                ResourceReader resourceReader = new ResourceReader(commandOptions.XlfDirectoryPath, directoryPrefix:"", fileExtension:"xlf");
+                XmlTojsonConverter converter = new XmlTojsonConverter(commandOptions.XlfDirectoryPath, commandOptions.LanguagePackDirectory, resourceReader);
+                converter.Convert();
             }
             else
             {
