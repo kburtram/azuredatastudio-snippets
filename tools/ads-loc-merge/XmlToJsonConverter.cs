@@ -54,8 +54,14 @@ namespace AzureDataStudio.Localization
 
         private string GetOutputFile(string inputfilename)
         {
-            FileInfo fInfo = new FileInfo(inputfilename);
-            return Path.Combine(destinationFolder, "translations\\extensions", fInfo.Name + "i18n.json");
+            FileInfo fInfo = new FileInfo(inputfilename);            
+            if (fInfo.Name.Split(".").Length > 1)
+            {
+                string nameWithoutLoc = fInfo.Name.Split(".")[0];
+                return Path.Combine(destinationFolder, "translations\\extensions", nameWithoutLoc + ".i18n.json");
+
+            }
+            return Path.Combine(destinationFolder, "translations\\extensions", fInfo.Name + ".i18n.json");
         }
 
         public void Convert(Xliff xlifobject, string jsonFile)
