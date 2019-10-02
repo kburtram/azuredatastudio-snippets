@@ -18,6 +18,8 @@ namespace AzureDataStudio.Localization
 
         public static readonly string PathMapAction = "pathmap";
 
+        public static readonly string ConvertAction = "convert";
+
         /// <summary>
         /// Construct and parse command line options from the arguments array
         /// </summary>
@@ -42,7 +44,7 @@ namespace AzureDataStudio.Localization
                         {
                             case "action":
                                 this.Action = args[++i];
-                                break;       
+                                break;
                             case "langpack-dir":
                                 this.LanguagePackDirectory = args[++i];
                                 break;
@@ -54,7 +56,10 @@ namespace AzureDataStudio.Localization
                                 break;
                             case "path-mapping":
                                 this.PathMapping = args[++i];
-                                break;                      
+                                break;
+                            case "xlf-dir":
+                                this.XlfDirectoryPath = args[++i];
+                                break;
                             default:
                                 ErrorMessage += string.Format("Unknown argument \"{0}\"" + Environment.NewLine, argName);
                                 break;
@@ -96,6 +101,13 @@ namespace AzureDataStudio.Localization
                 && (string.IsNullOrWhiteSpace(this.SourceDirectoryPath)
                 || string.IsNullOrWhiteSpace(this.ResourceDirectoryPath)
                 || string.IsNullOrWhiteSpace(this.PathMapping)))
+            {
+                return false;
+            }
+
+            if (string.Equals(this.Action, CommandOptions.ConvertAction, StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrWhiteSpace(this.XlfDirectoryPath)
+                || string.IsNullOrWhiteSpace(this.LanguagePackDirectory)))
             {
                 return false;
             }
@@ -144,6 +156,11 @@ namespace AzureDataStudio.Localization
         public string PathMapping { get; private set; }
 
         /// <summary>
+        /// Folder to look for xlf files
+        /// </summary>
+        public string XlfDirectoryPath { get; private set; }
+        
+        /// <summary>
         /// Get the usage string describing command-line arguments for the program
         /// </summary>
         public string Usage
@@ -156,8 +173,9 @@ namespace AzureDataStudio.Localization
                     "        --langpack-dir [DIRECTORY]" + Environment.NewLine +
                     "        --resource-dir [DIRECTORY]" + Environment.NewLine +
                     "        --path-mapping [FILE]" + Environment.NewLine +
-                    "        --source-mapping [FILE]" + Environment.NewLine +             
-                    "        --action [default|pathmap]" + Environment.NewLine,
+                    "        --source-mapping [FILE]" + Environment.NewLine +
+                    "        --xlf-dir [DIRECTORY]" + Environment.NewLine + 
+                    "        --action [default|pathmap|convert]" + Environment.NewLine,
                     this.ErrorMessage);
                 return str;
             }
