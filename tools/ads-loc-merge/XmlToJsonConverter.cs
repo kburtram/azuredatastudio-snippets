@@ -54,14 +54,8 @@ namespace AzureDataStudio.Localization
 
         private string GetOutputFile(string inputfilename)
         {
-            FileInfo fInfo = new FileInfo(inputfilename);            
-            if (fInfo.Name.Split(".").Length > 1)
-            {
-                string nameWithoutLoc = fInfo.Name.Split(".")[0];
-                return Path.Combine(destinationFolder, "translations\\extensions", nameWithoutLoc + ".i18n.json");
-
-            }
-            return Path.Combine(destinationFolder, "translations\\extensions", fInfo.Name + ".i18n.json");
+            FileInfo fInfo = new FileInfo(inputfilename);
+            return Path.Combine(destinationFolder, "translations\\extensions", fInfo.Name.Substring(0, fInfo.Name.IndexOf('.')) + ".i18n.json");
         }
 
         public void Convert(Xliff xlifobject, string jsonFile)
@@ -75,18 +69,37 @@ namespace AzureDataStudio.Localization
                     f.body = null;
                 }
 
-                var translationunit = xlifobject.Files.ToDictionary(x => x.File, x => x.keyValuePairs);
+                var translationunit = xlifobject.Files.ToDictionary(x => GetOutputFile(x), x => x.keyValuePairs);
 
                 ExtensionTranslatedObject finaloutput = new ExtensionTranslatedObject();
                 finaloutput.contents = translationunit;
 
                 JsonSerializerSettings setting = new JsonSerializerSettings()
                 {
-                    NullValueHandling = NullValueHandling.Ignore
+                    NullValueHandling = NullValueHandling.Ignore,
+                    Formatting = Newtonsoft.Json.Formatting.Indented
                 };
                 string jsonString = JsonConvert.SerializeObject(finaloutput, setting);
                 File.WriteAllText(jsonFile, jsonString);
             }
         }
+
+        private string GetOutputFile(FileRef x)
+        {
+            if (x.File.Contains("out"))
+            {
+                return x.File.Substring(x.File.IndexOf("out"));
+            }
+            else if (x.File.Contains("dist"))
+            {
+                return x.File.Substring(x.File.IndexOf("dist"));
+            }
+            else if (x.File.Contains("package"))
+            {
+                return x.File.Substring(x.File.IndexOf("package"));
+            }
+            return x.File;
+        }
+
     }
 }
